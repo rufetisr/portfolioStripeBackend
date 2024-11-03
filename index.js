@@ -24,10 +24,15 @@ const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 // app.use(express.urlencoded({ extended: true }))
 
 // console.log(process.env.CLIENT_DOMAIN);
+app.use(cors({
+    origin: `${process.env.CLIENT_DOMAIN}`
+}));
 
 app.use(['/publish', '/checkout-session'], requestLogger)
 
 app.use((req, res, next) => {
+
+
     const referer = req.get('Referer');
 
     if (req.path == '/webhook') {
@@ -42,9 +47,7 @@ app.use((req, res, next) => {
     }
 });
 
-app.use(cors({
-    origin: `${process.env.CLIENT_DOMAIN}`
-}));
+
 // const proxyMiddleware = createProxyMiddleware({
 //     target: 'http://localhost:3000', // Your backend server URL
 //     changeOrigin: true,
@@ -100,12 +103,18 @@ app.post('/checkout-session', async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'payment',
+
             line_items: [
                 {
                     price_data: {
                         currency: 'usd',
                         product_data: {
                             name: 'Portfolio Website Product',
+                            description: `This is a personal portfolio showcasing work and projects of the owner. It serves as a platform to display your projects, skills, and experience to potential clients or employers in the specific field. 
+                            It includes a clean, responsive mobile menu and sticky navigation for effortless browsing on any device.
+                            Built-in downloadable QR code provides instant access to your site, while a contact form integrated with EmailJS ensures easy communication with your audience. 
+                            After payment you will get email with source code link.`,
+                            images: ['https://fiela-template-preview.netlify.app/images/dark-mode.png'],
                         },
                         unit_amount: 999, // e.g., $16.99
                     },

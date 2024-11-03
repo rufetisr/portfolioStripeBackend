@@ -31,7 +31,7 @@ const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 // Middleware to capture raw body for the webhook
 app.use(express.json({
     verify: (req, res, buf) => {
-        req.rawBody = buf.toString(); // Convert the buffer to a string
+        req.rawBody = buf // Capture the raw body buffer
     }
 }));
 
@@ -154,6 +154,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     // console.log('webhook');
 
     let event;
+
+    // Logging the received signature and raw body for debugging
+    console.log('Received signature:', sig);
+    console.log('Raw body:', req.rawBody.toString());
 
     try {
         event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);

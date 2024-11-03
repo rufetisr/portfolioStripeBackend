@@ -22,7 +22,7 @@ const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 // const { createProxyMiddleware } = require('http-proxy-middleware')
 
 
-app.use(express.json())
+// app.use(express.json())
 // app.use(express.urlencoded({ extended: true }))
 
 // console.log(process.env.CLIENT_DOMAIN);
@@ -41,22 +41,22 @@ app.use(cors({
 
 app.use(['/publish', '/checkout-session'], requestLogger)
 
-app.use((req, res, next) => {
+// app.use((req, res, next) => {
 
 
-    const referer = req.get('Referer');
+//     const referer = req.get('Referer');
 
-    if (req.path == '/webhook') {
-        // Allow all requests to the webhook
-        return next();
-    }
+//     if (req.path == '/webhook') {
+//         // Allow all requests to the webhook
+//         return next();
+//     }
 
-    if (referer?.startsWith(`${process.env.CLIENT_DOMAIN}`)) {
-        return next();
-    } else {
-        return res.status(403).send('<b>Forbidden!</b>');
-    }
-});
+//     if (referer?.startsWith(`${process.env.CLIENT_DOMAIN}`)) {
+//         return next();
+//     } else {
+//         return res.status(403).send('<b>Forbidden!</b>');
+//     }
+// });
 
 
 // const proxyMiddleware = createProxyMiddleware({

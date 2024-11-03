@@ -16,7 +16,7 @@ const STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY
 const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 
 // body-parser
-const bodyParser = require('body-parser')
+// const bodyParser = require('body-parser')
 
 
 // const { createProxyMiddleware } = require('http-proxy-middleware')
@@ -28,8 +28,12 @@ const bodyParser = require('body-parser')
 // console.log(process.env.CLIENT_DOMAIN);
 
 // Use body-parser middleware to parse incoming JSON requests
-app.use(bodyParser.json());
-
+// Middleware to capture raw body for the webhook
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString(); // Convert the buffer to a string
+    }
+}));
 
 app.use(cors({
     origin: `${process.env.CLIENT_DOMAIN}`
@@ -152,7 +156,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     let event;
 
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
         logger.error(`Webhook signature verification failed. ${err.message}`)
         // console.error('Webhook signature verification failed.');

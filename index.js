@@ -15,6 +15,8 @@ const requestLogger = require('./loggerMiddleware')
 const STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY
 const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 
+// body-parser
+const bodyParser = require('body-parser')
 
 
 // const { createProxyMiddleware } = require('http-proxy-middleware')
@@ -24,6 +26,11 @@ const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 // app.use(express.urlencoded({ extended: true }))
 
 // console.log(process.env.CLIENT_DOMAIN);
+
+// Use body-parser middleware to parse incoming JSON requests
+app.use(bodyParser.json());
+
+
 app.use(cors({
     origin: `${process.env.CLIENT_DOMAIN}`
 }));

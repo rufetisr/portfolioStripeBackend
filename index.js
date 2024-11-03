@@ -22,18 +22,18 @@ const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 // const { createProxyMiddleware } = require('http-proxy-middleware')
 
 
-// app.use(express.json())
+app.use(express.json())
 // app.use(express.urlencoded({ extended: true }))
 
 // console.log(process.env.CLIENT_DOMAIN);
 
 // Use body-parser middleware to parse incoming JSON requests
 // Middleware to capture raw body for the webhook
-app.use(express.json({
-    verify: (req, res, buf) => {
-        req.rawBody = buf // Capture the raw body buffer
-    }
-}));
+// app.use(express.json({
+//     verify: (req, res, buf) => {
+//         req.rawBody = buf // Capture the raw body buffer
+//     }
+// }));
 
 app.use(cors({
     origin: `${process.env.CLIENT_DOMAIN}`
@@ -151,7 +151,7 @@ app.post('/checkout-session', async (req, res) => {
 // to handle events after payment
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     const sig = req.headers['stripe-signature'];
-    // console.log('webhook');
+    console.log('webhook');
 
     let event;
 

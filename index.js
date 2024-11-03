@@ -107,8 +107,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     let event;
 
     // Logging the received signature and raw body for debugging
-    console.log('Received signature:', sig);
-    console.log('Raw body:', req.body.toString());
+    logger.info('Received signature:', sig);
+    logger.info('Raw body:', req.body.toString());
 
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);

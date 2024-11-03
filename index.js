@@ -22,22 +22,21 @@ app.use(cors({
 
 app.use(['/publish', '/checkout-session'], requestLogger)
 
-// app.use((req, res, next) => {
+app.use((req, res, next) => {
 
+    const referer = req.get('Referer');
 
-//     const referer = req.get('Referer');
+    if (req.path == '/webhook') {
+        // Allow all requests to the webhook
+        return next();
+    }
 
-//     if (req.path == '/webhook') {
-//         // Allow all requests to the webhook
-//         return next();
-//     }
-
-//     if (referer?.startsWith(`${process.env.CLIENT_DOMAIN}`)) {
-//         return next();
-//     } else {
-//         return res.status(403).send('<b>Forbidden!</b>');
-//     }
-// });
+    if (referer?.startsWith(`${process.env.CLIENT_DOMAIN}`)) {
+        return next();
+    } else {
+        return res.status(403).send('<b>Forbidden!</b>');
+    }
+});
 
 
 
@@ -106,10 +105,6 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 
     let event;
 
-    // Logging the received signature and raw body for debugging
-    logger.info('Received signature:', sig);
-    logger.info('Raw body:', req.body.toString());
-
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
@@ -162,5 +157,5 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 app.get('/publish', (req, res) => {
     // console.log('Successfully sended');
     logger.info('Successfully sended pKey');
-    res.status(200).json({ STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY });
+    return res.status(200).json({ STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY });
 });

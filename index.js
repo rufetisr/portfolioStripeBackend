@@ -12,8 +12,8 @@ const logger = require('./logger')
 const requestLogger = require('./loggerMiddleware')
 
 // stripe
-const STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY
-const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
+// const STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY
+// const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
 
 
 app.use(cors({
@@ -98,39 +98,102 @@ app.post('/checkout-session', async (req, res) => {
     }
 })
 
-// to handle events after payment
-app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    console.log('webhook');
+// to handle events after payment for stripe
+// app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+//     const sig = req.headers['stripe-signature'];
+//     console.log('webhook');
 
-    let event;
+//     let event;
+
+//     try {
+//         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+//     } catch (err) {
+//         logger.error(`Webhook signature verification failed. ${err.message}`)
+//         // console.error('Webhook signature verification failed.');
+//         return res.sendStatus(400);
+//     }
+
+//     //event.type == 'charge.captured' || event.type == 'payment_intent.succeeded' || 
+//     // Handle the event
+//     if (event.type === 'checkout.session.completed') {
+//         const session = event.data.object;
+//         const customerEmail = session?.customer_details?.email;
+//         // console.log('Payment success');
+//         logger.info(`Payment success from: ${customerEmail}`)
+
+
+//         if (customerEmail) {
+
+//             transporter.sendMail({
+//                 to: `${customerEmail}`,
+//                 subject: 'Your project zip file',
+//                 html: '',
+//                 text: `
+//                 Project link: https://drive.google.com/file/d/1ROa-zR7fJaFBOjIPo2NqWYZmeK2nlESJ/view?usp=drive_link
+//                 If file doesn't open, click Request access, you will get project file as soon as possible.
+//                 `
+//             }, async (err, info) => {
+//                 if (err) {
+//                     logger.error(`Error sending email: ${err.message}`)
+//                     return res.status(500).send(err.message);
+//                 }
+//                 else {
+//                     logger.info('Success sending email')
+//                     return res.status(200).send('Success email sending');
+//                 }
+//             })
+//             return;
+//             /// -------//////
+//         }
+//     }
+
+//     // Respond to Stripe
+//     res.json({ received: true });
+// });
+
+
+// to handle events after payment for paypal webhook
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    // Replace 'YOUR_WEBHOOK_ID' and 'YOUR_PAYPAL_CLIENT_SECRET' with your own values
+    const paypalSignature = req.headers['paypal-auth-algo'];
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+    // Verify webhook data
+
 
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-        logger.error(`Webhook signature verification failed. ${err.message}`)
-        // console.error('Webhook signature verification failed.');
+        const isValid = verifyWebhook(req.body, paypalSignature, webhookId, clientSecret);
+    } catch (error) {
+        logger.error(`Webhook signature verification failed. ${error.message}`)
         return res.sendStatus(400);
     }
+    // logger.error(`Webhook signature verification failed. ${err.message}`)
+    // // console.error('Webhook signature verification failed.');
+    // return res.sendStatus(400);
 
     //event.type == 'charge.captured' || event.type == 'payment_intent.succeeded' || 
     // Handle the event
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const customerEmail = session?.customer_details?.email;
-        // console.log('Payment success');
-        logger.info(`Payment success from: ${customerEmail}`)
+    // if (event.type === 'checkout.session.completed') {
+    //     const session = event.data.object;
+    //     const customerEmail = session?.customer_details?.email;
+    //     // console.log('Payment success');
+    //     logger.info(`Payment success from: ${customerEmail}`)
 
+    if (req.body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+        const paymentInfo = req?.body?.resource;
+        const customerEmail = paymentInfo?.payer?.email_address;
+        logger.info(`Payment success from: ${customerEmail}`)
+        // Process payment or send confirmation email to customerEmail
 
         if (customerEmail) {
 
             transporter.sendMail({
                 to: `${customerEmail}`,
-                subject: 'Your project zip file',
+                subject: 'Your project file',
                 html: '',
                 text: `
-                Project link: https://drive.google.com/file/d/1ROa-zR7fJaFBOjIPo2NqWYZmeK2nlESJ/view?usp=drive_link
-                If file doesn't open, click Request access, you will get project file as soon as possible.
+                Project link: https://drive.google.com/file/d/1ROa-zR7fJaFBOjIPo2NqWYZmeK2nlESJ/view?usp=drive_link                
                 `
             }, async (err, info) => {
                 if (err) {
@@ -145,17 +208,19 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
             return;
             /// -------//////
         }
+
+        res.sendStatus(200); // Respond to PayPal to acknowledge receipt
+    } else {
+        res.sendStatus(400); // Bad request if verification fails
     }
 
-    // Respond to Stripe
-    res.json({ received: true });
+
 });
 
 
-
-
-app.get('/publish', (req, res) => {
-    // console.log('Successfully sended');
-    logger.info('Successfully sended pKey');
-    return res.status(200).json({ STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY });
-});
+// for stripe public client key
+// app.get('/publish', (req, res) => {
+//     // console.log('Successfully sended');
+//     logger.info('Successfully sended pKey');
+//     return res.status(200).json({ STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY });
+// });

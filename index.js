@@ -11,6 +11,11 @@ const cors = require('cors');
 const logger = require('./logger')
 const requestLogger = require('./loggerMiddleware')
 
+// helper methods
+// const getAccessToken = require('./getAcessToken');
+const verifyWebhook = require('./verifyWebhook');
+
+
 // stripe
 // const STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY
 // const stripe = require('stripe')(STRIPE_PRIVATE_KEY);
@@ -155,64 +160,67 @@ app.post('/checkout-session', async (req, res) => {
 // to handle events after payment for paypal webhook
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     // Replace 'YOUR_WEBHOOK_ID' and 'YOUR_PAYPAL_CLIENT_SECRET' with your own values
-    const paypalSignature = req.headers['paypal-auth-algo'];
-    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
-    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+    const headers = req.headers;
+    const webhookPayload = req.body;
 
     // Verify webhook data
 
 
     try {
-        const isValid = verifyWebhook(req.body, paypalSignature, webhookId, clientSecret);
+        const isValid = verifyWebhook(headers, webhookPayload);
+
+        if (isValid) {
+            logger.info('Webhook verified and processed:', webhookPayload);
+
+            // Process your event here based on the webhook data
+            // For example: if (webhookPayload.event_type === 'PAYMENT.AUTHORIZATION.CREATED') {...}
+
+            // res.status(200).send('Webhook verified and processed');
+
+            if (req.body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+                const paymentInfo = req?.body?.resource;
+                const customerEmail = paymentInfo?.payer?.email_address;
+                logger.info(`Payment success from: ${customerEmail}`)
+                // Process payment or send confirmation email to customerEmail
+
+                if (customerEmail) {
+
+                    transporter.sendMail({
+                        to: `${customerEmail}`,
+                        subject: 'Your project file',
+                        html: '',
+                        text: `
+                        Project link: https://drive.google.com/file/d/1ROa-zR7fJaFBOjIPo2NqWYZmeK2nlESJ/view?usp=drive_link                
+                        `
+                    }, async (err, info) => {
+                        if (err) {
+                            logger.error(`Error sending email: ${err.message}`)
+                            return res.status(500).send(err.message);
+                        }
+                        else {
+                            logger.info('Success sending email')
+                            return res.status(200).send('Success email sending');
+                        }
+                    })
+                    return;
+                    /// -------//////
+                }
+
+                res.sendStatus(200); // Respond to PayPal to acknowledge receipt
+            } else {
+                res.sendStatus(400); // Bad request if verification fails
+            }
+        }
+        else {
+            console.warn('Invalid webhook signature');
+            res.status(400).send('Invalid signature');
+        }
     } catch (error) {
-        logger.error(`Webhook signature verification failed. ${error.message}`)
+        logger.error(`Error verifying webhook: ${error.message}`)
         return res.sendStatus(400);
     }
-    // logger.error(`Webhook signature verification failed. ${err.message}`)
-    // // console.error('Webhook signature verification failed.');
-    // return res.sendStatus(400);
 
-    //event.type == 'charge.captured' || event.type == 'payment_intent.succeeded' || 
-    // Handle the event
-    // if (event.type === 'checkout.session.completed') {
-    //     const session = event.data.object;
-    //     const customerEmail = session?.customer_details?.email;
-    //     // console.log('Payment success');
-    //     logger.info(`Payment success from: ${customerEmail}`)
 
-    if (req.body.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-        const paymentInfo = req?.body?.resource;
-        const customerEmail = paymentInfo?.payer?.email_address;
-        logger.info(`Payment success from: ${customerEmail}`)
-        // Process payment or send confirmation email to customerEmail
-
-        if (customerEmail) {
-
-            transporter.sendMail({
-                to: `${customerEmail}`,
-                subject: 'Your project file',
-                html: '',
-                text: `
-                Project link: https://drive.google.com/file/d/1ROa-zR7fJaFBOjIPo2NqWYZmeK2nlESJ/view?usp=drive_link                
-                `
-            }, async (err, info) => {
-                if (err) {
-                    logger.error(`Error sending email: ${err.message}`)
-                    return res.status(500).send(err.message);
-                }
-                else {
-                    logger.info('Success sending email')
-                    return res.status(200).send('Success email sending');
-                }
-            })
-            return;
-            /// -------//////
-        }
-
-        res.sendStatus(200); // Respond to PayPal to acknowledge receipt
-    } else {
-        res.sendStatus(400); // Bad request if verification fails
-    }
 
 
 });
